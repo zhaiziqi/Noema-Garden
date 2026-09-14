@@ -1,0 +1,76 @@
+from __future__ import annotations
+
+import httpx
+
+from app.genome.mapping import thought_to_seed, traits_to_genome
+from app.llm.ollama_client import ask_traits, ollama_available, resolve_model
+from app.models.schemas import DEFAULT_TRAITS, InterpretResponse, SemanticTraits
+
+
+async def interpret_thought(thought: str) -> InterpretResponse:
+    """
+    Thought → Semantic Traits (Ollama) → Genome (deterministic code).
+
+    On LLM failure: retry once, then DEFAULT_TRAITS.
+    Seed always derived from thought so plants stay unique even on fallback.
+    """
+    cleaned = thought.strip()
+    seed = thought_to_seed(cleaned)
+
+    async with httpx.AsyncClient() as client:
+        if not await ollama_available(client):
+            genome = traits_to_genome(DEFAULT_TRAITS, seed)
+            return InterpretResponse(
+                thought=cleaned,
+                traits=DEFAULT_TRAITS,
+                genome=genome,
+                seed=seed,
+                source="fallback",
+                model=None,
+                message="Ollama offline — used default traits with thought seed.",
+            )
+
+        model = await resolve_model(client)
+        if not model:
+            genome = traits_to_genome(DEFAULT_TRAITS, seed)
+            return InterpretResponse(
+                thought=cleaned,
+                traits=DEFAULT_TRAITS,
+                genome=genome,
+                seed=seed,
+                source="fallback",
+                model=None,
+                message="No Ollama model installed — used default traits.",
+            )
+
+        traits: SemanticTraits | None = None
+        last_error: str | None = None
+        for _attempt in range(2):
+            try:
+                traits = await ask_traits(cleaned, model, client)
+                break
+            except Exception as exc:  # noqa: BLE001 — must never crash plant flow
+                last_error = str(exc)
+
+        if traits is None:
+            genome = traits_to_genome(DEFAULT_TRAITS, seed)
+            return InterpretResponse(
+                thought=cleaned,
+                traits=DEFAULT_TRAITS,
+                genome=genome,
+                seed=seed,
+                source="fallback",
+                model=model,
+                message=f"LLM parse failed after retry — default traits. ({last_error})",
+            )
+
+        genome = traits_to_genome(traits, seed)
+        return InterpretResponse(
+            thought=cleaned,
+            traits=traits,
+            genome=genome,
+            seed=seed,
+            source="ollama",
+            model=model,
+            message=None,
+        )

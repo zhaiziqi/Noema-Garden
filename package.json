@@ -1,0 +1,15 @@
+{
+  "name": "noema-garden",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @noema/web",
+    "dev:api": "python -m uvicorn app.main:app --reload --app-dir apps/api --host 127.0.0.1 --port 8000",
+    "dev": "npm run dev:web",
+    "dev:all": "powershell -ExecutionPolicy Bypass -File scripts/dev.ps1"
+  }
+}
