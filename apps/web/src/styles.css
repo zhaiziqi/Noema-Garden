@@ -139,6 +139,33 @@ body,
   color: #c9a39f;
 }
 
+.home-badges--quiet .api-status {
+  opacity: 0.55;
+  font-size: 0.68rem;
+}
+
+.garden-rearrange {
+  font: inherit;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  color: rgba(232, 226, 214, 0.45);
+  background: transparent;
+  border: 1px solid rgba(232, 226, 214, 0.16);
+  padding: 0.45rem 0.7rem;
+}
+
+.garden-rearrange:hover:not(:disabled) {
+  color: rgba(232, 226, 214, 0.85);
+  border-color: rgba(232, 226, 214, 0.35);
+}
+
+.garden-rearrange:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .home-badges {
   position: absolute;
   z-index: 2;
@@ -263,18 +290,19 @@ body,
 
 .plant-inspect__badge {
   margin-top: 0.75rem;
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  opacity: 0.72;
 }
 
 .plant-inspect__badge--interpreted {
-  color: #9fc9b8;
+  color: rgba(159, 201, 184, 0.55);
 }
 
 .plant-inspect__badge--default,
 .plant-inspect__badge--unknown {
-  color: #c9b39f;
+  color: rgba(201, 179, 159, 0.85);
 }
 
 .plant-inspect__gloss {

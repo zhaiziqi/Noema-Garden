@@ -12,6 +12,7 @@ OLLAMA_BASE = os.environ.get("NOEMA_OLLAMA_URL", "http://127.0.0.1:11434").rstri
 # Prefer Qwen3.5 4B; override with NOEMA_OLLAMA_MODEL.
 PREFERRED_MODELS = (
     os.environ.get("NOEMA_OLLAMA_MODEL"),
+    "qwen3.5:2b",
     "qwen3.5:4b",
     "qwen3.5:4b-instruct",
     "qwen2.5:3b",
@@ -106,7 +107,12 @@ async def ask_traits(thought: str, model: str, client: httpx.AsyncClient) -> Sem
         "model": model,
         "stream": False,
         "format": "json",
-        "options": {"temperature": 0.2},
+        # Top-level think=false — required for Qwen3.5; options.think is ignored.
+        "think": False,
+        "options": {
+            "temperature": 0.2,
+            "num_predict": 256,
+        },
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -120,9 +126,13 @@ async def ask_traits(thought: str, model: str, client: httpx.AsyncClient) -> Sem
             },
         ],
     }
-    r = await client.post(f"{OLLAMA_BASE}/api/chat", json=payload, timeout=120.0)
+    r = await client.post(f"{OLLAMA_BASE}/api/chat", json=payload, timeout=45.0)
     r.raise_for_status()
     data = r.json()
-    content = data.get("message", {}).get("content") or data.get("response") or ""
+    message = data.get("message") or {}
+    content = message.get("content") or data.get("response") or ""
+    if not content and message.get("thinking"):
+        # Some builds put leftovers in thinking even with think=false — try extract.
+        content = message.get("thinking") or ""
     parsed = _extract_json(content)
     return SemanticTraits.model_validate(parsed)

@@ -7,7 +7,12 @@ type HealthResponse = {
 
 type StatusState = "loading" | "ok" | "error";
 
-export function ApiStatus() {
+type Props = {
+  /** When true, only render if API/DB is unhealthy */
+  quiet?: boolean;
+};
+
+export function ApiStatus({ quiet = false }: Props) {
   const [state, setState] = useState<StatusState>("loading");
   const [label, setLabel] = useState("Checking API…");
 
@@ -36,6 +41,8 @@ export function ApiStatus() {
       cancelled = true;
     };
   }, []);
+
+  if (quiet && state !== "error") return null;
 
   return (
     <div className="api-status" data-state={state}>

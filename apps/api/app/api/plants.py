@@ -64,6 +64,26 @@ def list_plants(db: Session = Depends(get_db)) -> list[PlantRecord]:
     return [_row_to_record(row) for row in rows]
 
 
+@router.post("/plants/relayout", response_model=list[PlantRecord])
+def relayout_plants(db: Session = Depends(get_db)) -> list[PlantRecord]:
+    """
+    Recompute positions for all plants from stored traits (creation order).
+    Deterministic for a given set — used to migrate out of the old tight spiral.
+    """
+    rows = db.query(Plant).order_by(Plant.created_at.asc(), Plant.id.asc()).all()
+    occupied: list[tuple[float, float]] = []
+    for row in rows:
+        traits = SemanticTraits.model_validate_json(row.traits)
+        x, z = find_open_position(occupied, row.seed, traits)
+        row.position_x = x
+        row.position_z = z
+        occupied.append((x, z))
+    db.commit()
+    for row in rows:
+        db.refresh(row)
+    return [_row_to_record(row) for row in rows]
+
+
 @router.get("/plants/{plant_id}", response_model=PlantRecord)
 def get_plant(plant_id: int, db: Session = Depends(get_db)) -> PlantRecord:
     row = db.get(Plant, plant_id)

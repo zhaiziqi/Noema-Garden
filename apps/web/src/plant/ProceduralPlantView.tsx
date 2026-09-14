@@ -90,8 +90,10 @@ function BranchMesh({
     if (!mesh || !mat) return;
     const reveal = branchReveal(depth, maxDepth, growthRef.current);
     mesh.visible = reveal > 0.02;
-    // Soft fade-in (avoid scaleScalar — it shrinks tubes from centroid)
-    mat.opacity = 0.2 + reveal * 0.8;
+    // Grow out from a short stub (scale) — less “ghost fade”
+    const s = 0.12 + reveal * 0.88;
+    mesh.scale.set(s, s, s);
+    mat.opacity = 0.55 + reveal * 0.45;
   });
 
   if (!geometry) return null;

@@ -79,3 +79,9 @@ export async function deletePlant(id: number): Promise<void> {
   const response = await fetch(`/api/plants/${id}`, { method: "DELETE" });
   if (!response.ok) throw new Error(await readError(response));
 }
+
+export async function relayoutPlants(): Promise<PlantRecord[]> {
+  const response = await fetch("/api/plants/relayout", { method: "POST" });
+  if (!response.ok) throw new Error(await readError(response));
+  return (await response.json()) as PlantRecord[];
+}

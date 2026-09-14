@@ -4,6 +4,7 @@ import {
   deletePlant,
   fetchPlants,
   plantThought,
+  relayoutPlants,
   type PlantRecord,
 } from "../api/client";
 
@@ -24,6 +25,7 @@ type GardenStore = {
   loadGarden: () => Promise<void>;
   plantAThought: (thought: string) => Promise<GardenPlant | null>;
   removePlant: (id: number) => Promise<boolean>;
+  rearrangeGarden: () => Promise<void>;
   selectPlant: (id: number | null) => void;
   clearStatus: () => void;
 };
@@ -49,7 +51,21 @@ export const useGardenStore = create<GardenStore>((set, get) => ({
   loadGarden: async () => {
     set({ loading: true, error: null });
     try {
-      const rows = await fetchPlants();
+      let rows = await fetchPlants();
+      // One-shot migrate old tight spiral into semantic layout.
+      const flagKey = "noema-semantic-relayout-v1";
+      const needsRelayout =
+        rows.length > 0 &&
+        typeof localStorage !== "undefined" &&
+        localStorage.getItem(flagKey) !== "1";
+      if (needsRelayout) {
+        try {
+          rows = await relayoutPlants();
+          localStorage.setItem(flagKey, "1");
+        } catch {
+          /* keep fetched positions if relayout fails */
+        }
+      }
       set({
         plants: rows.map((row) => normalize(row, false)),
         loading: false,
@@ -67,24 +83,27 @@ export const useGardenStore = create<GardenStore>((set, get) => ({
   plantAThought: async (thought: string) => {
     const text = thought.trim();
     if (!text || get().planting) return null;
-    set({ planting: true, error: null, statusLine: null });
+    set({ planting: true, error: null, statusLine: "Reading your thought…" });
+    const started = performance.now();
     try {
       const record = await plantThought(text);
       const planted = normalize(record, true);
+      const elapsed = ((performance.now() - started) / 1000).toFixed(1);
       set((state) => ({
         plants: [...state.plants, planted],
         planting: false,
         selectedId: planted.id,
         statusLine:
           record.source === "ollama"
-            ? `Interpreted${record.model ? ` · ${record.model}` : ""}`
-            : "Default traits — meaning not read",
+            ? `Interpreted${record.model ? ` · ${record.model}` : ""} · ${elapsed}s`
+            : `Default traits — meaning not read · ${elapsed}s`,
       }));
       return planted;
     } catch (err) {
       set({
         planting: false,
         error: err instanceof Error ? err.message : "Failed to plant thought",
+        statusLine: null,
       });
       return null;
     }
@@ -108,6 +127,26 @@ export const useGardenStore = create<GardenStore>((set, get) => ({
         error: err instanceof Error ? err.message : "Failed to remove plant",
       });
       return false;
+    }
+  },
+
+  rearrangeGarden: async () => {
+    set({ loading: true, error: null });
+    try {
+      const rows = await relayoutPlants();
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("noema-semantic-relayout-v1", "1");
+      }
+      set({
+        plants: rows.map((row) => normalize(row, false)),
+        loading: false,
+        statusLine: "Garden rearranged by meaning",
+      });
+    } catch (err) {
+      set({
+        loading: false,
+        error: err instanceof Error ? err.message : "Failed to rearrange garden",
+      });
     }
   },
 

@@ -27,7 +27,7 @@ async def interpret_thought(thought: str) -> InterpretResponse:
                 seed=seed,
                 source="fallback",
                 model=None,
-                message="Ollama offline — used default traits with thought seed.",
+                message="Ollama offline — meaning not read; default traits used.",
             )
 
         model = await resolve_model(client)
@@ -40,7 +40,7 @@ async def interpret_thought(thought: str) -> InterpretResponse:
                 seed=seed,
                 source="fallback",
                 model=None,
-                message="No Ollama model installed — used default traits.",
+                message="No local model — meaning not read; default traits used.",
             )
 
         traits: SemanticTraits | None = None
@@ -61,7 +61,7 @@ async def interpret_thought(thought: str) -> InterpretResponse:
                 seed=seed,
                 source="fallback",
                 model=model,
-                message=f"LLM parse failed after retry — default traits. ({last_error})",
+                message="Could not read meaning after retry — default traits used.",
             )
 
         genome = traits_to_genome(traits, seed)

@@ -92,6 +92,7 @@ export function HomePage() {
   const loadGarden = useGardenStore((s) => s.loadGarden);
   const plantAThought = useGardenStore((s) => s.plantAThought);
   const removePlant = useGardenStore((s) => s.removePlant);
+  const rearrangeGarden = useGardenStore((s) => s.rearrangeGarden);
   const selectPlant = useGardenStore((s) => s.selectPlant);
 
   const selected = useMemo(
@@ -187,7 +188,9 @@ export function HomePage() {
               {planting ? "Listening…" : "Plant"}
             </button>
             <p className="thought-hint">
-              {planting ? "Reading your thought…" : "Enter · Shift+Enter newline"}
+              {planting
+                ? "Reading your thought — usually a few seconds…"
+                : "Enter · Shift+Enter newline"}
             </p>
           </div>
           {error ? <p className="thought-error">{error}</p> : null}
@@ -199,14 +202,11 @@ export function HomePage() {
         <aside className="plant-inspect" aria-live="polite">
           <p className="plant-inspect__species">{selected.species}</p>
           <p className="plant-inspect__date">{formatPlantDate(selected.created_at)}</p>
-          {interp ? (
+          {interp && interp.kind !== "interpreted" ? (
             <p
               className={`plant-inspect__badge plant-inspect__badge--${interp.kind}`}
             >
               {interp.text}
-              {selected.source === "ollama" && selected.model
-                ? ` · ${selected.model}`
-                : ""}
             </p>
           ) : null}
           {gloss ? <p className="plant-inspect__gloss">{gloss}</p> : null}
@@ -263,17 +263,28 @@ export function HomePage() {
 
       {loading && !hydrated ? <p className="garden-empty">Restoring garden…</p> : null}
 
-      <div className="home-badges">
-        <ApiStatus />
-        <div
-          className="api-status"
-          data-state={llmLabel.includes("offline") || llmLabel.includes("unread") ? "error" : "ok"}
-        >
-          {llmLabel}
-        </div>
+      <div className="home-badges home-badges--quiet">
+        {plants.length > 0 ? (
+          <button
+            type="button"
+            className="garden-rearrange"
+            onClick={() => {
+              void rearrangeGarden();
+            }}
+            disabled={loading || planting}
+          >
+            Rearrange
+          </button>
+        ) : null}
         <div className="api-status" data-state="ok">
           {plants.length} plant{plants.length === 1 ? "" : "s"}
         </div>
+        {llmLabel.includes("offline") || llmLabel.includes("unread") || llmLabel.includes("no model") ? (
+          <div className="api-status" data-state="error">
+            {llmLabel}
+          </div>
+        ) : null}
+        <ApiStatus quiet />
       </div>
 
       <Link className="dev-corner-link" to="/dev/genome">
