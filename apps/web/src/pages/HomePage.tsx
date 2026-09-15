@@ -81,9 +81,11 @@ export function HomePage() {
   const [thought, setThought] = useState("");
   const [llmLabel, setLlmLabel] = useState("LLM …");
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const plants = useGardenStore((s) => s.plants);
   const selectedId = useGardenStore((s) => s.selectedId);
   const planting = useGardenStore((s) => s.planting);
+  const plantPhase = useGardenStore((s) => s.plantPhase);
   const removing = useGardenStore((s) => s.removing);
   const loading = useGardenStore((s) => s.loading);
   const error = useGardenStore((s) => s.error);
@@ -91,6 +93,7 @@ export function HomePage() {
   const hydrated = useGardenStore((s) => s.hydrated);
   const loadGarden = useGardenStore((s) => s.loadGarden);
   const plantAThought = useGardenStore((s) => s.plantAThought);
+  const cancelPlanting = useGardenStore((s) => s.cancelPlanting);
   const removePlant = useGardenStore((s) => s.removePlant);
   const rearrangeGarden = useGardenStore((s) => s.rearrangeGarden);
   const selectPlant = useGardenStore((s) => s.selectPlant);
@@ -163,6 +166,20 @@ export function HomePage() {
   const chips = selected ? pickTraitChips(selected.traits) : [];
   const gloss = selected ? formGloss(selected.genome, selected.traits) : null;
 
+  const phaseHint =
+    plantPhase === "reading"
+      ? "正在读懂这句话…"
+      : plantPhase === "placing"
+        ? "在园里找位置…"
+        : "Enter · Shift+Enter 换行";
+
+  const progressClass =
+    plantPhase === "reading"
+      ? "plant-progress plant-progress--reading"
+      : plantPhase === "placing"
+        ? "plant-progress plant-progress--placing"
+        : "plant-progress";
+
   return (
     <div className="app-shell">
       <header className="brand-overlay brand-overlay--garden">
@@ -171,6 +188,7 @@ export function HomePage() {
 
         <form className="thought-form" onSubmit={onSubmit}>
           <textarea
+            ref={inputRef}
             className="thought-input"
             rows={3}
             placeholder="最近有一点迷茫，但感觉事情正在慢慢变好。"
@@ -179,19 +197,30 @@ export function HomePage() {
             onKeyDown={onKeyDown}
             disabled={planting}
           />
+          {planting ? (
+            <div className={progressClass} aria-hidden>
+              <div className="plant-progress__bar" />
+            </div>
+          ) : null}
           <div className="thought-actions">
-            <button
-              type="submit"
-              className="thought-plant-btn"
-              disabled={planting || !thought.trim()}
-            >
-              {planting ? "Listening…" : "Plant"}
-            </button>
-            <p className="thought-hint">
-              {planting
-                ? "Reading your thought — usually a few seconds…"
-                : "Enter · Shift+Enter newline"}
-            </p>
+            {planting ? (
+              <button
+                type="button"
+                className="thought-cancel-btn"
+                onClick={() => cancelPlanting()}
+              >
+                取消
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="thought-plant-btn"
+                disabled={!thought.trim()}
+              >
+                Plant
+              </button>
+            )}
+            <p className="thought-hint">{phaseHint}</p>
           </div>
           {error ? <p className="thought-error">{error}</p> : null}
           {statusLine && !error ? <p className="thought-status">{statusLine}</p> : null}
@@ -254,11 +283,20 @@ export function HomePage() {
       ) : null}
 
       {emptyGarden ? (
-        <p className="garden-empty">Your garden is waiting for a first thought.</p>
+        <div className="garden-empty-block">
+          <p className="garden-empty">园子还空着——写下第一句想法吧。</p>
+          <button
+            type="button"
+            className="garden-empty-focus"
+            onClick={() => inputRef.current?.focus()}
+          >
+            去写下想法
+          </button>
+        </div>
       ) : null}
 
       <p className="garden-legend">
-        暖意偏一侧 · 平静靠外缘 · 希望更近中心
+        意思相近的会靠在一起 · 希望仍偏中心
       </p>
 
       {loading && !hydrated ? <p className="garden-empty">Restoring garden…</p> : null}
@@ -287,9 +325,11 @@ export function HomePage() {
         <ApiStatus quiet />
       </div>
 
-      <Link className="dev-corner-link" to="/dev/genome">
-        Dev · Genome
-      </Link>
+      {import.meta.env.DEV ? (
+        <Link className="dev-corner-link" to="/dev/genome">
+          Dev · Genome
+        </Link>
+      ) : null}
 
       <SharpCanvas
         camera={{
@@ -299,17 +339,20 @@ export function HomePage() {
           far: 200,
         }}
         gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+        onPointerMissed={() => selectPlant(null)}
         onCreated={({ gl }) => {
           gl.setClearColor("#0a1018", 1);
           gl.toneMappingExposure = 1.22;
         }}
       >
-        <MuseumScene groundRadius={18}>
+        <MuseumScene
+          groundRadius={18}
+          onGroundClick={() => selectPlant(null)}
+        >
           <GardenBed
             plants={plants}
             selectedId={selectedId}
             onSelect={selectPlant}
-            onDeselect={() => selectPlant(null)}
           />
         </MuseumScene>
         <CameraRig targetX={lookAt.x} targetY={lookAt.y} targetZ={lookAt.z} />

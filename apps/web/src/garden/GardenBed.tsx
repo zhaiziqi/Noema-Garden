@@ -13,10 +13,14 @@ type Props = {
 
 function GardenPlantInstance({ plant, selected, onSelect }: Props) {
   const structure = useMemo(() => generatePlant(plant.genome), [plant.genome]);
+  const grown = !plant.animateGrowth;
   const growthClock = useGrowthClock(
     plant.genome.growthSpeed,
-    `${plant.id}-${plant.animateGrowth ? "grow" : "settled"}`,
-    { startFullyGrown: !plant.animateGrowth },
+    `${plant.id}-${grown ? "settled" : "grow"}-${plant.initialElapsedSec.toFixed(2)}`,
+    {
+      startFullyGrown: grown,
+      initialElapsedSec: plant.initialElapsedSec,
+    },
   );
 
   const scale =
@@ -38,7 +42,6 @@ function GardenPlantInstance({ plant, selected, onSelect }: Props) {
         document.body.style.cursor = "auto";
       }}
     >
-      {/* Invisible hit volume so sparse foliage is still clickable */}
       <mesh position={[0, structure.boundsHeight * 0.45, 0]} visible={false}>
         <cylinderGeometry args={[0.55, 0.7, structure.boundsHeight * 0.95, 12]} />
         <meshBasicMaterial />
@@ -65,16 +68,11 @@ type BedProps = {
   plants: GardenPlant[];
   selectedId: number | null;
   onSelect: (id: number) => void;
-  onDeselect: () => void;
 };
 
-export function GardenBed({ plants, selectedId, onSelect, onDeselect }: BedProps) {
+export function GardenBed({ plants, selectedId, onSelect }: BedProps) {
   return (
-    <group
-      onPointerMissed={() => {
-        onDeselect();
-      }}
-    >
+    <group>
       {plants.map((plant) => (
         <GardenPlantInstance
           key={plant.id}

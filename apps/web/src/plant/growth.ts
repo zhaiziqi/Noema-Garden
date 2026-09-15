@@ -1,7 +1,7 @@
 /**
  * Growth reveal schedule (visual, not botanical simulation).
  * Seed → Stem → Branches → Leaves → Flowers over ~3–6s.
- * Stages are more sequential so structure reads as growing, not fading in.
+ * Stages are sequential so structure reads as growing, not fading in.
  */
 
 export type GrowthStages = {
@@ -33,10 +33,10 @@ export function evaluateGrowth(elapsedSec: number, durationSec: number): GrowthS
 
   return {
     t,
-    stem: smoothstep(0.0, 0.22, t),
-    branches: smoothstep(0.16, 0.48, t),
-    leaves: smoothstep(0.4, 0.72, t),
-    flowers: smoothstep(0.62, 0.96, t),
+    stem: smoothstep(0.0, 0.2, t),
+    branches: smoothstep(0.14, 0.5, t),
+    leaves: smoothstep(0.42, 0.74, t),
+    flowers: smoothstep(0.66, 0.98, t),
   };
 }
 
@@ -45,7 +45,6 @@ export function branchReveal(depth: number, maxDepth: number, stages: GrowthStag
   if (depth <= 0) return stages.stem;
   const tip = depth / Math.max(1, maxDepth);
   const raw = stages.branches * (1.2 - tip * 0.65);
-  // Ease-out so branches “extend” rather than pop
   const e = clamp01(raw);
   return e * e * (3 - 2 * e);
 }

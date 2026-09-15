@@ -90,10 +90,17 @@ function BranchMesh({
     if (!mesh || !mat) return;
     const reveal = branchReveal(depth, maxDepth, growthRef.current);
     mesh.visible = reveal > 0.02;
-    // Grow out from a short stub (scale) — less “ghost fade”
-    const s = 0.12 + reveal * 0.88;
-    mesh.scale.set(s, s, s);
-    mat.opacity = 0.55 + reveal * 0.45;
+    if (depth <= 0) {
+      // Stem: shoot upward
+      const sy = 0.05 + reveal * 0.95;
+      const sxz = 0.28 + reveal * 0.72;
+      mesh.scale.set(sxz, sy, sxz);
+    } else {
+      // Branches: extend from a stub
+      const s = 0.06 + reveal * 0.94;
+      mesh.scale.set(s * 0.85, s, s * 0.85);
+    }
+    mat.opacity = 0.78 + reveal * 0.22;
   });
 
   if (!geometry) return null;
@@ -183,7 +190,7 @@ function LeafField({
     if (matRef.current) {
       matRef.current.opacity = Math.min(
         0.98,
-        (0.86 + structure.palette.translucency * 0.12) * Math.min(1, reveal * 1.2),
+        (0.9 + structure.palette.translucency * 0.08) * Math.min(1, 0.35 + reveal * 0.9),
       );
     }
   });

@@ -8,6 +8,7 @@ type Props = {
   camera?: CanvasProps["camera"];
   gl?: CanvasProps["gl"];
   onCreated?: CanvasProps["onCreated"];
+  onPointerMissed?: CanvasProps["onPointerMissed"];
 };
 
 /**
@@ -25,6 +26,7 @@ export function SharpCanvas({
   camera,
   gl,
   onCreated,
+  onPointerMissed,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<RootState | null>(null);
@@ -76,6 +78,7 @@ export function SharpCanvas({
         // Avoid R3F measuring the canvas default 300×150 box.
         // `resize={false}` is intentional; we size from the outer host.
         {...({ resize: false } as object)}
+        onPointerMissed={onPointerMissed}
         onCreated={(state) => {
           stateRef.current = state;
           const host = hostRef.current;

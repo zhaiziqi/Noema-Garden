@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import httpx
 
+from app.garden.embeddings import embed_text
 from app.genome.mapping import thought_to_seed, traits_to_genome
 from app.llm.ollama_client import ask_traits, ollama_available, resolve_model
 from app.models.schemas import DEFAULT_TRAITS, InterpretResponse, SemanticTraits
@@ -13,6 +14,7 @@ async def interpret_thought(thought: str) -> InterpretResponse:
 
     On LLM failure: retry once, then DEFAULT_TRAITS.
     Seed always derived from thought so plants stay unique even on fallback.
+    Embedding is best-effort and never blocks planting.
     """
     cleaned = thought.strip()
     seed = thought_to_seed(cleaned)
@@ -28,6 +30,7 @@ async def interpret_thought(thought: str) -> InterpretResponse:
                 source="fallback",
                 model=None,
                 message="Ollama offline — meaning not read; default traits used.",
+                embedding=None,
             )
 
         model = await resolve_model(client)
@@ -41,6 +44,7 @@ async def interpret_thought(thought: str) -> InterpretResponse:
                 source="fallback",
                 model=None,
                 message="No local model — meaning not read; default traits used.",
+                embedding=None,
             )
 
         traits: SemanticTraits | None = None
@@ -52,6 +56,8 @@ async def interpret_thought(thought: str) -> InterpretResponse:
             except Exception as exc:  # noqa: BLE001 — must never crash plant flow
                 last_error = str(exc)
 
+        embedding = await embed_text(cleaned, client)
+
         if traits is None:
             genome = traits_to_genome(DEFAULT_TRAITS, seed)
             return InterpretResponse(
@@ -62,6 +68,7 @@ async def interpret_thought(thought: str) -> InterpretResponse:
                 source="fallback",
                 model=model,
                 message="Could not read meaning after retry — default traits used.",
+                embedding=embedding,
             )
 
         genome = traits_to_genome(traits, seed)
@@ -73,4 +80,5 @@ async def interpret_thought(thought: str) -> InterpretResponse:
             source="ollama",
             model=model,
             message=None,
+            embedding=embedding,
         )

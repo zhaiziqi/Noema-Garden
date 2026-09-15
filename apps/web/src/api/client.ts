@@ -8,6 +8,7 @@ export type InterpretResponse = {
   source: "ollama" | "fallback";
   model: string | null;
   message: string | null;
+  embedding?: number[] | null;
 };
 
 export type LlmStatus = {
@@ -30,6 +31,17 @@ export type PlantRecord = {
   message?: string | null;
 };
 
+export type PlantThoughtPayload = {
+  thought: string;
+  traits?: SemanticTraits;
+  genome?: PlantGenomeV1;
+  seed?: number;
+  source?: "ollama" | "fallback";
+  model?: string | null;
+  embedding?: number[] | null;
+  message?: string | null;
+};
+
 async function readError(response: Response): Promise<string> {
   const text = await response.text();
   try {
@@ -41,11 +53,15 @@ async function readError(response: Response): Promise<string> {
   return text || `HTTP ${response.status}`;
 }
 
-export async function interpretThought(thought: string): Promise<InterpretResponse> {
+export async function interpretThought(
+  thought: string,
+  signal?: AbortSignal,
+): Promise<InterpretResponse> {
   const response = await fetch("/api/interpret", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ thought }),
+    signal,
   });
   if (!response.ok) throw new Error(await readError(response));
   return (await response.json()) as InterpretResponse;
@@ -65,11 +81,28 @@ export async function fetchPlants(): Promise<PlantRecord[]> {
   return (await response.json()) as PlantRecord[];
 }
 
-export async function plantThought(thought: string): Promise<PlantRecord> {
+export async function plantThought(
+  payload: PlantThoughtPayload | string,
+  signal?: AbortSignal,
+): Promise<PlantRecord> {
+  const body =
+    typeof payload === "string"
+      ? { thought: payload }
+      : {
+          thought: payload.thought,
+          traits: payload.traits,
+          genome: payload.genome,
+          seed: payload.seed,
+          source: payload.source,
+          model: payload.model,
+          embedding: payload.embedding,
+          message: payload.message,
+        };
   const response = await fetch("/api/plants", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ thought }),
+    body: JSON.stringify(body),
+    signal,
   });
   if (!response.ok) throw new Error(await readError(response));
   return (await response.json()) as PlantRecord;

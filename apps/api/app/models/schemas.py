@@ -84,6 +84,7 @@ class InterpretResponse(BaseModel):
     source: Literal["ollama", "fallback"]
     model: str | None = None
     message: str | None = None
+    embedding: list[float] | None = None
 
 
 class PlantPosition(BaseModel):
@@ -107,3 +108,11 @@ class PlantRecord(BaseModel):
 
 class PlantThoughtRequest(BaseModel):
     thought: str = Field(..., min_length=1, max_length=2000)
+    # Optional precomputed interpret result — skip a second LLM round-trip.
+    traits: SemanticTraits | None = None
+    genome: PlantGenomeV1 | None = None
+    seed: int | None = None
+    source: Literal["ollama", "fallback"] | None = None
+    model: str | None = None
+    embedding: list[float] | None = None
+    message: str | None = None

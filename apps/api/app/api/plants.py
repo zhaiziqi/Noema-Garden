@@ -6,11 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database.session import SessionLocal
-from app.garden.layout import find_open_position
+from app.garden.layout import dump_embedding, layout_garden, parse_embedding
 from app.garden.species import species_name
 from app.llm.interpreter import interpret_thought
 from app.models.plant import Plant
 from app.models.schemas import (
+    InterpretResponse,
     PlantGenomeV1,
     PlantPosition,
     PlantRecord,
@@ -58,6 +59,23 @@ def _row_to_record(
     )
 
 
+def _relayout_all(db: Session) -> list[Plant]:
+    rows = db.query(Plant).order_by(Plant.created_at.asc(), Plant.id.asc()).all()
+    items: list[tuple[int, SemanticTraits, list[float] | None]] = []
+    for row in rows:
+        traits = SemanticTraits.model_validate_json(row.traits)
+        emb = parse_embedding(getattr(row, "embedding_json", None))
+        items.append((row.seed, traits, emb))
+    positions = layout_garden(items)
+    for row, (x, z) in zip(rows, positions):
+        row.position_x = x
+        row.position_z = z
+    db.commit()
+    for row in rows:
+        db.refresh(row)
+    return rows
+
+
 @router.get("/plants", response_model=list[PlantRecord])
 def list_plants(db: Session = Depends(get_db)) -> list[PlantRecord]:
     rows = db.query(Plant).order_by(Plant.created_at.asc(), Plant.id.asc()).all()
@@ -67,20 +85,9 @@ def list_plants(db: Session = Depends(get_db)) -> list[PlantRecord]:
 @router.post("/plants/relayout", response_model=list[PlantRecord])
 def relayout_plants(db: Session = Depends(get_db)) -> list[PlantRecord]:
     """
-    Recompute positions for all plants from stored traits (creation order).
-    Deterministic for a given set — used to migrate out of the old tight spiral.
+    Recompute positions for all plants (traits polar and/or embedding PCA).
     """
-    rows = db.query(Plant).order_by(Plant.created_at.asc(), Plant.id.asc()).all()
-    occupied: list[tuple[float, float]] = []
-    for row in rows:
-        traits = SemanticTraits.model_validate_json(row.traits)
-        x, z = find_open_position(occupied, row.seed, traits)
-        row.position_x = x
-        row.position_z = z
-        occupied.append((x, z))
-    db.commit()
-    for row in rows:
-        db.refresh(row)
+    rows = _relayout_all(db)
     return [_row_to_record(row) for row in rows]
 
 
@@ -97,7 +104,7 @@ async def plant_thought(
     body: PlantThoughtRequest,
     db: Session = Depends(get_db),
 ) -> PlantRecord:
-    """Interpret a thought, place it in the garden, and persist."""
+    """Interpret a thought (or accept precomputed), place it, persist, relayout."""
     thought = body.thought.strip()
     if not thought:
         raise HTTPException(status_code=400, detail="thought is empty")
@@ -109,10 +116,24 @@ async def plant_thought(
             detail="This thought is already planted in your garden.",
         )
 
-    interpreted = await interpret_thought(thought)
-    occupied = [(p.position_x, p.position_z) for p in db.query(Plant).all()]
-    x, z = find_open_position(occupied, interpreted.seed, interpreted.traits)
+    if body.traits is not None and body.genome is not None and body.seed is not None:
+        interpreted = InterpretResponse(
+            thought=thought,
+            traits=body.traits,
+            genome=body.genome,
+            seed=body.seed,
+            source=body.source or "fallback",
+            model=body.model,
+            message=body.message,
+            embedding=body.embedding,
+        )
+    else:
+        interpreted = await interpret_thought(thought)
+        if body.embedding is not None and interpreted.embedding is None:
+            interpreted.embedding = body.embedding
+
     name = species_name(interpreted.seed, interpreted.traits)
+    emb_json = dump_embedding(interpreted.embedding)
 
     row = Plant(
         thought=interpreted.thought,
@@ -120,16 +141,20 @@ async def plant_thought(
         genome=interpreted.genome.model_dump_json(),
         seed=interpreted.seed,
         species=name,
-        position_x=x,
-        position_z=z,
+        position_x=0.0,
+        position_z=0.0,
         source=interpreted.source,
         model=interpreted.model,
+        embedding_json=emb_json,
     )
     db.add(row)
     db.commit()
     db.refresh(row)
 
-    return _row_to_record(row, message=interpreted.message)
+    # Full-garden meaning map so clusters stay consistent.
+    rows = _relayout_all(db)
+    planted = next((r for r in rows if r.id == row.id), row)
+    return _row_to_record(planted, message=interpreted.message)
 
 
 @router.delete("/plants/{plant_id}")

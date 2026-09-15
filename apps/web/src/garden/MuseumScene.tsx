@@ -7,13 +7,20 @@ type Props = {
   shadows?: boolean;
   /** Ground disk radius (museum default ~7.5, garden bed ~18) */
   groundRadius?: number;
+  /** Click empty ground (deselect plant). */
+  onGroundClick?: () => void;
 };
 
 /**
  * Midnight Botanical Museum atmosphere — shared by Garden + Playground.
  * Readable night: lifted fill/key and ground, fog pushed back so forms stay crisp.
  */
-export function MuseumScene({ children, shadows = true, groundRadius = 7.5 }: Props) {
+export function MuseumScene({
+  children,
+  shadows = true,
+  groundRadius = 7.5,
+  onGroundClick,
+}: Props) {
   const ringInner = groundRadius * 0.2;
   const ringOuter = groundRadius * 0.28;
   const ringMid = groundRadius * 0.48;
@@ -71,7 +78,15 @@ export function MuseumScene({ children, shadows = true, groundRadius = 7.5 }: Pr
       />
 
       {/* Ground plane — charcoal-green, not void black */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0, 0]}
+        receiveShadow
+        onClick={(event) => {
+          event.stopPropagation();
+          onGroundClick?.();
+        }}
+      >
         <circleGeometry args={[groundRadius, 96]} />
         <meshStandardMaterial
           color="#1a2832"

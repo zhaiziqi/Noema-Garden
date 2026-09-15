@@ -404,8 +404,63 @@ body,
   cursor: default;
 }
 
+.thought-cancel-btn {
+  font: inherit;
+  cursor: pointer;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: rgba(232, 226, 214, 0.7);
+  background: transparent;
+  border: 1px solid rgba(232, 226, 214, 0.22);
+  padding: 0.55rem 1rem;
+}
+
+.thought-cancel-btn:hover {
+  color: var(--ivory);
+  border-color: rgba(232, 226, 214, 0.4);
+}
+
+.plant-progress {
+  margin-top: 0.55rem;
+  height: 2px;
+  background: rgba(232, 226, 214, 0.12);
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.plant-progress__bar {
+  height: 100%;
+  width: 35%;
+  background: rgba(232, 226, 214, 0.55);
+}
+
+.plant-progress--reading .plant-progress__bar {
+  width: 42%;
+  animation: plant-progress-pulse 1.4s ease-in-out infinite;
+}
+
+.plant-progress--placing .plant-progress__bar {
+  width: 78%;
+  transition: width 0.45s ease;
+}
+
+@keyframes plant-progress-pulse {
+  0%,
+  100% {
+    transform: translateX(-20%);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateX(120%);
+    opacity: 1;
+  }
+}
+
 .thought-actions .thought-hint {
   margin-top: 0;
+  text-transform: none;
+  letter-spacing: 0.04em;
 }
 
 .dev-corner-link {
@@ -424,17 +479,47 @@ body,
   color: rgba(232, 226, 214, 0.7);
 }
 
-.garden-empty {
+.garden-empty-block {
   position: absolute;
   z-index: 2;
   left: 50%;
-  bottom: 2.2rem;
+  bottom: 2.4rem;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  pointer-events: auto;
+}
+
+.garden-empty {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
   color: var(--muted);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-size: 0.78rem;
   pointer-events: none;
+  margin: 0;
+}
+
+.garden-empty-focus {
+  font: inherit;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  color: rgba(232, 226, 214, 0.65);
+  background: transparent;
+  border: 1px solid rgba(232, 226, 214, 0.22);
+  padding: 0.4rem 0.75rem;
+}
+
+.garden-empty-focus:hover {
+  color: var(--ivory);
+  border-color: rgba(232, 226, 214, 0.4);
 }
 
 .garden-legend {

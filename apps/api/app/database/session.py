@@ -31,6 +31,8 @@ def _migrate_plants_columns() -> None:
         statements.append("ALTER TABLE plants ADD COLUMN source VARCHAR(32)")
     if "model" not in existing:
         statements.append("ALTER TABLE plants ADD COLUMN model VARCHAR(128)")
+    if "embedding_json" not in existing:
+        statements.append("ALTER TABLE plants ADD COLUMN embedding_json TEXT")
     if not statements:
         return
     with engine.begin() as connection:

@@ -20,6 +20,7 @@ class Plant(Base):
     # Provenance: how traits were produced (ollama vs fallback).
     source: Mapped[str | None] = mapped_column(String(32), nullable=True, default=None)
     model: Mapped[str | None] = mapped_column(String(128), nullable=True, default=None)
+    embedding_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
