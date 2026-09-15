@@ -9,6 +9,7 @@ export type GrowthClock = {
 
 /**
  * Growth timing only — progress is sampled in useFrame (no per-frame React renders).
+ * initialElapsedSec is sampled when resetKey changes, not on every age tick.
  */
 export function useGrowthClock(
   growthSpeed: number,
@@ -21,7 +22,9 @@ export function useGrowthClock(
 ): MutableRefObject<GrowthClock> {
   const durationSec = growthDuration(growthSpeed);
   const startFullyGrown = options?.startFullyGrown ?? false;
-  const initialElapsedSec = options?.initialElapsedSec ?? 0;
+  const initialElapsedRef = useRef(options?.initialElapsedSec ?? 0);
+  initialElapsedRef.current = options?.initialElapsedSec ?? 0;
+
   const clockRef = useRef<GrowthClock>({
     startedAt: performance.now(),
     durationSec,
@@ -34,14 +37,15 @@ export function useGrowthClock(
     if (startFullyGrown) {
       elapsedMs = duration * 1000;
     } else {
-      elapsedMs = Math.max(0, Math.min(duration, initialElapsedSec)) * 1000;
+      elapsedMs =
+        Math.max(0, Math.min(duration, initialElapsedRef.current)) * 1000;
     }
     clockRef.current = {
       startedAt: performance.now() - elapsedMs,
       durationSec: duration,
       generation: clockRef.current.generation + 1,
     };
-  }, [growthSpeed, resetKey, startFullyGrown, initialElapsedSec]);
+  }, [growthSpeed, resetKey, startFullyGrown]);
 
   return clockRef;
 }

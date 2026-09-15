@@ -12,11 +12,16 @@ type Props = {
 };
 
 function GardenPlantInstance({ plant, selected, onSelect }: Props) {
-  const structure = useMemo(() => generatePlant(plant.genome), [plant.genome]);
+  // Depend on stable identity — not genome object reference (clampGenome always returns new objs).
+  const structure = useMemo(
+    () => generatePlant(plant.genome),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed uniquely identifies planted genome
+    [plant.id, plant.genome.seed, plant.genome.archetype],
+  );
   const grown = !plant.animateGrowth;
   const growthClock = useGrowthClock(
     plant.genome.growthSpeed,
-    `${plant.id}-${grown ? "settled" : "grow"}-${plant.initialElapsedSec.toFixed(2)}`,
+    `${plant.id}-${grown ? "settled" : "grow"}`,
     {
       startFullyGrown: grown,
       initialElapsedSec: plant.initialElapsedSec,

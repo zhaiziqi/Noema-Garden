@@ -120,11 +120,12 @@ export function MuseumScene({
       {shadows ? (
         <ContactShadows
           position={[0, 0.01, 0]}
-          opacity={0.32}
+          opacity={0.22}
           scale={groundRadius * 1.85}
-          blur={2.8}
-          far={6}
+          blur={2.2}
+          far={5}
           color="#05080c"
+          frames={1}
         />
       ) : null}
 

@@ -77,6 +77,29 @@ function normalize(
   };
 }
 
+function mergeGardenRows(
+  existing: GardenPlant[],
+  rows: PlantRecord[],
+  options?: { freshId?: number },
+): GardenPlant[] {
+  const byId = new Map(existing.map((p) => [p.id, p]));
+  return rows.map((row) => {
+    if (options?.freshId != null && row.id === options.freshId) {
+      return normalize(row, { fresh: true });
+    }
+    const prev = byId.get(row.id);
+    if (!prev) return normalize(row);
+    // Keep genome + growth clocks; only patch layout fields that may move.
+    const samePos =
+      prev.position.x === row.position.x && prev.position.z === row.position.z;
+    if (samePos) return prev;
+    return {
+      ...prev,
+      position: row.position,
+    };
+  });
+}
+
 export const useGardenStore = create<GardenStore>((set, get) => ({
   plants: [],
   selectedId: null,
@@ -155,7 +178,8 @@ export const useGardenStore = create<GardenStore>((set, get) => ({
       );
       if (controller.signal.aborted) return null;
 
-      // Relayout may have moved neighbors — refresh full garden.
+      // Relayout may move neighbors — refresh positions but keep existing plant identity
+      // so we do not rebuild every mesh / restart every growth clock.
       let rows: PlantRecord[];
       try {
         rows = await fetchPlants();
@@ -165,10 +189,9 @@ export const useGardenStore = create<GardenStore>((set, get) => ({
 
       const planted = normalize(record, { fresh: true });
       const elapsed = ((performance.now() - started) / 1000).toFixed(1);
+      const merged = mergeGardenRows(get().plants, rows, { freshId: record.id });
+      // Unlock UI first; apply garden mesh update on next frame to avoid a long hitch.
       set({
-        plants: rows.map((row) =>
-          row.id === record.id ? planted : normalize(row),
-        ),
         planting: false,
         plantPhase: "idle",
         selectedId: planted.id,
@@ -176,6 +199,9 @@ export const useGardenStore = create<GardenStore>((set, get) => ({
           record.source === "ollama"
             ? `已读懂${record.model ? ` · ${record.model}` : ""} · ${elapsed}s`
             : `未能读懂含义，已用默认性状 · ${elapsed}s`,
+      });
+      requestAnimationFrame(() => {
+        set({ plants: merged });
       });
       if (plantAbort === controller) plantAbort = null;
       return planted;
@@ -241,7 +267,7 @@ export const useGardenStore = create<GardenStore>((set, get) => ({
         localStorage.setItem("noema-semantic-relayout-v2", "1");
       }
       set({
-        plants: rows.map((row) => normalize(row)),
+        plants: mergeGardenRows(get().plants, rows),
         loading: false,
         statusLine: "已按意思重新排布",
       });

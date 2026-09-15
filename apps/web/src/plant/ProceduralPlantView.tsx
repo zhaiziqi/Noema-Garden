@@ -89,14 +89,22 @@ function BranchMesh({
     const mat = matRef.current;
     if (!mesh || !mat) return;
     const reveal = branchReveal(depth, maxDepth, growthRef.current);
+    if (reveal >= 0.999) {
+      // Settled — set once then skip per-frame work.
+      if (mesh.scale.y < 0.999) {
+        if (depth <= 0) mesh.scale.set(1, 1, 1);
+        else mesh.scale.set(0.85, 1, 0.85);
+        mat.opacity = 1;
+        mesh.visible = true;
+      }
+      return;
+    }
     mesh.visible = reveal > 0.02;
     if (depth <= 0) {
-      // Stem: shoot upward
       const sy = 0.05 + reveal * 0.95;
       const sxz = 0.28 + reveal * 0.72;
       mesh.scale.set(sxz, sy, sxz);
     } else {
-      // Branches: extend from a stub
       const s = 0.06 + reveal * 0.94;
       mesh.scale.set(s * 0.85, s, s * 0.85);
     }
@@ -138,6 +146,10 @@ function LeafField({
     quat: Quaternion[];
     scl: Vector3[];
   } | null>(null);
+  const matrix = useMemo(() => new Matrix4(), []);
+  const tmpS = useMemo(() => new Vector3(), []);
+  const settledRef = useRef(false);
+  const frameSkip = useRef(0);
 
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -172,9 +184,14 @@ function LeafField({
     const base = baseRef.current;
     if (!mesh || !base || count === 0) return;
     const reveal = growthRef.current.leaves;
-    const matrix = new Matrix4();
-    const tmpS = new Vector3();
     const t = clock.elapsedTime;
+
+    // Fully grown: update flutter every other frame only.
+    if (reveal >= 0.999 && settledRef.current) {
+      frameSkip.current += 1;
+      if (frameSkip.current % 2 === 1) return;
+    }
+    if (reveal >= 0.999) settledRef.current = true;
 
     for (let i = 0; i < count; i++) {
       const local = Math.min(1, Math.max(0, (reveal - (i / count) * 0.35) / 0.65));
@@ -405,11 +422,13 @@ export function ProceduralPlantView({
   useFrame(({ clock }) => {
     const gc = growthClock.current;
     const elapsed = (performance.now() - gc.startedAt) / 1000;
-    growthRef.current = evaluateGrowth(elapsed, gc.durationSec);
+    const stages = evaluateGrowth(elapsed, gc.durationSec);
+    growthRef.current = stages;
 
     const g = windRef.current;
     if (!g) return;
-    const w = windResponse;
+    // Soft wind always; cheaper trig when fully grown.
+    const w = windResponse * (stages.t >= 1 ? 0.65 : 1);
     const t = clock.elapsedTime;
     g.rotation.z = Math.sin(t * 0.55) * 0.035 * w;
     g.rotation.x = Math.sin(t * 0.37 + 1.1) * 0.018 * w;
@@ -420,7 +439,7 @@ export function ProceduralPlantView({
     <group ref={windRef} scale={scale}>
       {structure.branches.map((branch) => (
         <BranchMesh
-          key={`${branch.id}-${growthClock.current.generation}`}
+          key={branch.id}
           points={branch.points}
           radiusStart={branch.radiusStart}
           radiusEnd={branch.radiusEnd}
