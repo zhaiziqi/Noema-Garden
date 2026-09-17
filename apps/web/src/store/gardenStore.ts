@@ -6,6 +6,7 @@ import {
   interpretThought,
   plantThought,
   relayoutPlants,
+  type NeuralAesthetic,
   type PlantRecord,
 } from "../api/client";
 import { growthDuration } from "../plant/growth";
@@ -36,6 +37,8 @@ type GardenStore = {
   rearrangeGarden: () => Promise<void>;
   selectPlant: (id: number | null) => void;
   clearStatus: () => void;
+  setPlantNeural: (id: number, neural: NeuralAesthetic | null) => void;
+  refreshGarden: () => Promise<void>;
 };
 
 let plantAbort: AbortController | null = null;
@@ -89,13 +92,25 @@ function mergeGardenRows(
     }
     const prev = byId.get(row.id);
     if (!prev) return normalize(row);
-    // Keep genome + growth clocks; only patch layout fields that may move.
+    // Keep genome + growth clocks; only patch fields that move when the
+    // garden changes — position from relayout, rank from a new neighbour.
     const samePos =
       prev.position.x === row.position.x && prev.position.z === row.position.z;
-    if (samePos) return prev;
+    const sameRank =
+      prev.aesthetic?.score === row.aesthetic?.score &&
+      prev.aesthetic?.rank === row.aesthetic?.rank &&
+      prev.aesthetic?.total === row.aesthetic?.total;
+    const sameNeural =
+      prev.neural?.raw === row.neural?.raw &&
+      prev.neural?.score === row.neural?.score &&
+      prev.neural?.rank === row.neural?.rank &&
+      prev.neural?.total === row.neural?.total;
+    if (samePos && sameRank && sameNeural) return prev;
     return {
       ...prev,
       position: row.position,
+      aesthetic: row.aesthetic,
+      neural: row.neural,
     };
   });
 }
@@ -281,4 +296,21 @@ export const useGardenStore = create<GardenStore>((set, get) => ({
 
   selectPlant: (id) => set({ selectedId: id }),
   clearStatus: () => set({ statusLine: null, error: null }),
+
+  setPlantNeural: (id, neural) => {
+    set((state) => ({
+      plants: state.plants.map((p) => (p.id === id ? { ...p, neural } : p)),
+    }));
+  },
+
+  // Neural normalisation is garden-wide, so ranks only settle once every plant
+  // has been scored. Called when the scoring queue drains.
+  refreshGarden: async () => {
+    try {
+      const rows = await fetchPlants();
+      set((state) => ({ plants: mergeGardenRows(state.plants, rows) }));
+    } catch {
+      /* keep what we have; scores refresh on the next load */
+    }
+  },
 }));

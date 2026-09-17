@@ -20,6 +20,8 @@ import {
   pickTraitChips,
 } from "../garden/formGloss";
 import { fetchLlmStatus } from "../api/client";
+import { PortraitRig } from "../aesthetic/PortraitRig";
+import { useNeuralScoring } from "../aesthetic/useNeuralScoring";
 import { useGardenStore } from "../store/gardenStore";
 
 function formatPlantDate(iso: string): string {
@@ -103,6 +105,8 @@ export function HomePage() {
     [plants, selectedId],
   );
 
+  const scoring = useNeuralScoring(plants);
+
   const lookAt = useMemo(() => {
     if (selected) {
       return {
@@ -165,6 +169,8 @@ export function HomePage() {
   const interp = selected ? interpretationLabel(selected.source) : null;
   const chips = selected ? pickTraitChips(selected.traits) : [];
   const gloss = selected ? formGloss(selected.genome, selected.traits) : null;
+  const aesthetic = selected?.aesthetic ?? null;
+  const neural = selected?.neural ?? null;
 
   const phaseHint =
     plantPhase === "reading"
@@ -239,6 +245,62 @@ export function HomePage() {
             </p>
           ) : null}
           {gloss ? <p className="plant-inspect__gloss">{gloss}</p> : null}
+          {aesthetic ? (
+            <div className="plant-aesthetic">
+              <div className="plant-aesthetic__row">
+                <span className="plant-aesthetic__kind">形态</span>
+                <span className="plant-aesthetic__score">
+                  {aesthetic.score.toFixed(1)}
+                </span>
+                {aesthetic.rank && aesthetic.total ? (
+                  <span className="plant-aesthetic__rank">
+                    第 {aesthetic.rank} / {aesthetic.total}
+                  </span>
+                ) : null}
+              </div>
+              {aesthetic.facets.length > 0 ? (
+                <ul className="plant-aesthetic__facets">
+                  {aesthetic.facets.map((facet) => (
+                    <li key={facet.key}>
+                      <span className="plant-aesthetic__facet-label">{facet.label}</span>
+                      <span className="plant-aesthetic__track">
+                        <span
+                          className="plant-aesthetic__fill"
+                          style={{ width: `${Math.round(facet.value * 100)}%` }}
+                        />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <div
+                className="plant-aesthetic__row plant-aesthetic__row--neural"
+                title={neural ? `CLIP+LAION 原始分 ${neural.raw.toFixed(3)}` : undefined}
+              >
+                <span className="plant-aesthetic__kind">视觉</span>
+                {neural ? (
+                  <>
+                    <span className="plant-aesthetic__score">
+                      {neural.score.toFixed(1)}
+                    </span>
+                    {neural.rank && neural.total ? (
+                      <span className="plant-aesthetic__rank">
+                        第 {neural.rank} / {neural.total}
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="plant-aesthetic__waiting">
+                    {scoring.remaining > 0 ? "评分中…" : "未评分"}
+                  </span>
+                )}
+              </div>
+              <p className="plant-aesthetic__note">
+                形态来自基因组规则 · 视觉来自 CLIP 图像模型，按全园分布归一化
+              </p>
+            </div>
+          ) : null}
           {chips.length > 0 ? (
             <ul className="plant-inspect__chips">
               {chips.map((chip) => (
@@ -357,6 +419,12 @@ export function HomePage() {
         </MuseumScene>
         <CameraRig targetX={lookAt.x} targetY={lookAt.y} targetZ={lookAt.z} />
       </SharpCanvas>
+
+      <PortraitRig
+        plant={scoring.subject}
+        token={scoring.token}
+        onFrame={scoring.onFrame}
+      />
     </div>
   );
 }

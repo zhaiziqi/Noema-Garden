@@ -17,6 +17,32 @@ export type LlmStatus = {
   model: string | null;
 };
 
+export type AestheticFacet = {
+  key: string;
+  label: string;
+  value: number;
+};
+
+export type AestheticScore = {
+  score: number;
+  version: string;
+  facets: AestheticFacet[];
+  /** Rank within the whole garden, 1 = best. Recomputed per request. */
+  rank?: number | null;
+  total?: number | null;
+  percentile?: number | null;
+};
+
+export type NeuralAesthetic = {
+  /** Model output before normalisation; only meaningful relative to the garden. */
+  raw: number;
+  version: string;
+  score: number;
+  rank?: number | null;
+  total?: number | null;
+  percentile?: number | null;
+};
+
 export type PlantRecord = {
   id: number;
   thought: string;
@@ -29,6 +55,8 @@ export type PlantRecord = {
   source?: "ollama" | "fallback" | null;
   model?: string | null;
   message?: string | null;
+  aesthetic?: AestheticScore | null;
+  neural?: NeuralAesthetic | null;
 };
 
 export type PlantThoughtPayload = {
@@ -111,6 +139,20 @@ export async function plantThought(
 export async function deletePlant(id: number): Promise<void> {
   const response = await fetch(`/api/plants/${id}`, { method: "DELETE" });
   if (!response.ok) throw new Error(await readError(response));
+}
+
+export async function putNeuralScore(
+  id: number,
+  raw: number,
+  version: string,
+): Promise<PlantRecord> {
+  const response = await fetch(`/api/plants/${id}/neural`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ raw, version }),
+  });
+  if (!response.ok) throw new Error(await readError(response));
+  return (await response.json()) as PlantRecord;
 }
 
 export async function relayoutPlants(): Promise<PlantRecord[]> {

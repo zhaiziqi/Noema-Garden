@@ -313,6 +313,92 @@ body,
   color: rgba(232, 226, 214, 0.78);
 }
 
+.plant-aesthetic {
+  margin-top: 0.95rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(232, 226, 214, 0.1);
+}
+
+.plant-aesthetic__row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+
+.plant-aesthetic__row--neural {
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(232, 226, 214, 0.07);
+}
+
+.plant-aesthetic__kind {
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  color: rgba(232, 226, 214, 0.45);
+}
+
+.plant-aesthetic__score {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 1.9rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--ivory);
+}
+
+.plant-aesthetic__rank {
+  margin-left: auto;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.plant-aesthetic__waiting {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: rgba(232, 226, 214, 0.35);
+}
+
+.plant-aesthetic__note {
+  margin-top: 0.6rem;
+  font-size: 0.6rem;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  color: rgba(232, 226, 214, 0.3);
+}
+
+.plant-aesthetic__facets {
+  list-style: none;
+  margin-top: 0.7rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.plant-aesthetic__facets li {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.plant-aesthetic__facet-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: rgba(232, 226, 214, 0.5);
+}
+
+.plant-aesthetic__track {
+  height: 2px;
+  background: rgba(232, 226, 214, 0.1);
+  overflow: hidden;
+}
+
+.plant-aesthetic__fill {
+  display: block;
+  height: 100%;
+  background: rgba(159, 201, 184, 0.62);
+  transition: width 420ms ease;
+}
+
 .plant-inspect__chips {
   display: flex;
   flex-wrap: wrap;

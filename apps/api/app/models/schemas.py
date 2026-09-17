@@ -92,6 +92,39 @@ class PlantPosition(BaseModel):
     z: float
 
 
+class AestheticFacet(BaseModel):
+    key: str
+    label: str
+    value: float = Field(0.0, ge=0.0, le=1.0)
+
+
+class AestheticScore(BaseModel):
+    score: float = Field(0.0, ge=0.0, le=100.0)
+    version: str
+    facets: list[AestheticFacet] = Field(default_factory=list)
+    # Filled per request against the whole garden, not persisted.
+    rank: int | None = None
+    total: int | None = None
+    percentile: float | None = None
+
+
+class NeuralAesthetic(BaseModel):
+    """CLIP+LAION score. `raw` is the model output, everything else is
+    normalised against the current garden, so none of it is persisted."""
+
+    raw: float
+    version: str
+    score: float = Field(50.0, ge=0.0, le=100.0)
+    rank: int | None = None
+    total: int | None = None
+    percentile: float | None = None
+
+
+class NeuralScoreRequest(BaseModel):
+    raw: float = Field(..., ge=-100.0, le=100.0)
+    version: str = Field(..., min_length=1, max_length=64)
+
+
 class PlantRecord(BaseModel):
     id: int
     thought: str
@@ -104,6 +137,8 @@ class PlantRecord(BaseModel):
     source: Literal["ollama", "fallback"] | None = None
     model: str | None = None
     message: str | None = None
+    aesthetic: AestheticScore | None = None
+    neural: NeuralAesthetic | None = None
 
 
 class PlantThoughtRequest(BaseModel):

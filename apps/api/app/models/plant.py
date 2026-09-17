@@ -21,6 +21,13 @@ class Plant(Base):
     source: Mapped[str | None] = mapped_column(String(32), nullable=True, default=None)
     model: Mapped[str | None] = mapped_column(String(128), nullable=True, default=None)
     embedding_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    # Aesthetic score + facet breakdown; recomputed when the scorer version bumps.
+    aesthetic_score: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
+    aesthetic_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    # Raw CLIP+LAION score from the browser. Normalisation is per-garden, so only
+    # the raw value is stored.
+    neural_raw: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
+    neural_version: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

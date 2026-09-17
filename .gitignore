@@ -12,6 +12,9 @@ __pycache__/
 data/*.db
 data/*.db-*
 .vite/
+*.tsbuildinfo
+# Downloaded by scripts/fetch_aesthetic_model.py
+apps/web/public/models/
 *.egg-info/
 .idea/
 .vscode/

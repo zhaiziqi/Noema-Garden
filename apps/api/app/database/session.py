@@ -33,6 +33,14 @@ def _migrate_plants_columns() -> None:
         statements.append("ALTER TABLE plants ADD COLUMN model VARCHAR(128)")
     if "embedding_json" not in existing:
         statements.append("ALTER TABLE plants ADD COLUMN embedding_json TEXT")
+    if "aesthetic_score" not in existing:
+        statements.append("ALTER TABLE plants ADD COLUMN aesthetic_score FLOAT")
+    if "aesthetic_json" not in existing:
+        statements.append("ALTER TABLE plants ADD COLUMN aesthetic_json TEXT")
+    if "neural_raw" not in existing:
+        statements.append("ALTER TABLE plants ADD COLUMN neural_raw FLOAT")
+    if "neural_version" not in existing:
+        statements.append("ALTER TABLE plants ADD COLUMN neural_version VARCHAR(64)")
     if not statements:
         return
     with engine.begin() as connection:
